@@ -24,155 +24,104 @@
 // message). It works with any integer or float type.
 //
 //     let positive_number: u32 = some_string.parse().expect("Failed to parse a number");
+use clap::{Parser, Subcommand};
+use image::DynamicImage;
+use std::path::PathBuf;
 
+#[derive(Parser)]
+#[command(version, about, long_about = None)]
+struct Cli {
+    image_in: PathBuf,
+    image_out: PathBuf,
+    #[command(subcommand)]
+    filter: Filter,
+}
+#[derive(Subcommand)]
+enum Filter {
+    Blur { sigma: f32 },
+    Brighten { value: i32 },
+}
 fn main() {
-    // 1. First, you need to implement some basic command-line argument handling
-    // so you can make your program do different things.  Here's a little bit
-    // to get you started doing manual parsing.
-    //
-    // Challenge: If you're feeling really ambitious, you could delete this code
-    // and use the "clap" library instead: https://docs.rs/clap/2.32.0/clap/
-    let mut args: Vec<String> = std::env::args().skip(1).collect();
-    if args.is_empty() {
-        print_usage_and_exit();
-    }
-    let subcommand = args.remove(0);
-    match subcommand.as_str() {
-        // EXAMPLE FOR CONVERSION OPERATIONS
-        "blur" => {
-            if args.len() != 2 {
-                print_usage_and_exit();
-            }
-            let infile = args.remove(0);
-            let outfile = args.remove(0);
-            // **OPTION**
-            // Improve the blur implementation -- see the blur() function below
-            blur(infile, outfile);
-        }
+    let cli = Cli::parse();
+    let file_in = cli.image_in.to_str().unwrap();
+    let file_out = cli.image_out.to_str().unwrap();
+    let img = image::open(file_in).expect("Failed to open INFILE.");
+    let img2 = match &cli.filter {
+        Filter::Blur { sigma } => blur(&img, *sigma),
+        Filter::Brighten { value } => brighten(&img, *value),
+        _ => None,
+    };
 
-        // **OPTION**
-        // Brighten -- see the brighten() function below
-
-        // **OPTION**
-        // Crop -- see the crop() function below
-
-        // **OPTION**
-        // Rotate -- see the rotate() function below
-
-        // **OPTION**
-        // Invert -- see the invert() function below
-
-        // **OPTION**
-        // Grayscale -- see the grayscale() function below
-
-        // A VERY DIFFERENT EXAMPLE...a really fun one. :-)
-        "fractal" => {
-            if args.len() != 1 {
-                print_usage_and_exit();
-            }
-            let outfile = args.remove(0);
-            fractal(outfile);
-        }
-
-        // **OPTION**
-        // Generate -- see the generate() function below -- this should be sort of like "fractal()"!
-
-        // For everything else...
-        _ => {
-            print_usage_and_exit();
-        }
+    if let Some(img) = img2 {
+        img.save(file_out).expect("Failed writing OUTFILE.");
     }
 }
 
-fn print_usage_and_exit() {
-    println!("USAGE (when in doubt, use a .png extension on your filenames)");
-    println!("blur INFILE OUTFILE");
-    println!("fractal OUTFILE");
-    // **OPTION**
-    // Print useful information about what subcommands and arguments you can use
-    // println!("...");
-    std::process::exit(-1);
+fn blur(img: &DynamicImage, sigma: f32) -> Option<DynamicImage> {
+    Some(img.blur(sigma))
 }
 
-fn blur(infile: String, outfile: String) {
-    // Here's how you open an existing image file
-    let img = image::open(infile).expect("Failed to open INFILE.");
-    // **OPTION**
-    // Parse the blur amount (an f32) from the command-line and pass it through
-    // to this function, instead of hard-coding it to 2.0.
-    let img2 = img.blur(2.0);
-    // Here's how you save an image to a file.
-    img2.save(outfile).expect("Failed writing OUTFILE.");
+fn brighten(img: &DynamicImage, value: i32) -> Option<DynamicImage> {
+    Some(img.brighten(value))
 }
 
-fn brighten(infile: String, outfile: String) {
-    // See blur() for an example of how to open / save an image.
-
-    // .brighten() takes one argument, an i32.  Positive numbers brighten the
-    // image. Negative numbers darken it.  It returns a new image.
-
-    // Challenge: parse the brightness amount from the command-line and pass it
-    // through to this function.
-}
-
-fn crop(infile: String, outfile: String) {
-    // See blur() for an example of how to open an image.
-
-    // .crop() takes four arguments: x: u32, y: u32, width: u32, height: u32
-    // You may hard-code them, if you like.  It returns a new image.
-
-    // Challenge: parse the four values from the command-line and pass them
-    // through to this function.
-
-    // See blur() for an example of how to save the image.
-}
-
-fn rotate(infile: String, outfile: String) {
-    // See blur() for an example of how to open an image.
-
-    // There are 3 rotate functions to choose from (all clockwise):
-    //   .rotate90()
-    //   .rotate180()
-    //   .rotate270()
-    // All three methods return a new image.  Pick one and use it!
-
-    // Challenge: parse the rotation amount from the command-line, pass it
-    // through to this function to select which method to call.
-
-    // See blur() for an example of how to save the image.
-}
-
-fn invert(infile: String, outfile: String) {
-    // See blur() for an example of how to open an image.
-
-    // .invert() takes no arguments and converts the image in-place, so you
-    // will use the same image to save out to a different file.
-
-    // See blur() for an example of how to save the image.
-}
-
-fn grayscale(infile: String, outfile: String) {
-    // See blur() for an example of how to open an image.
-
-    // .grayscale() takes no arguments. It returns a new image.
-
-    // See blur() for an example of how to save the image.
-}
-
-fn generate(outfile: String) {
-    // Create an ImageBuffer -- see fractal() for an example
-
-    // Iterate over the coordinates and pixels of the image -- see fractal() for an example
-
-    // Set the image to some solid color. -- see fractal() for an example
-
-    // Challenge: parse some color data from the command-line, pass it through
-    // to this function to use for the solid color.
-
-    // Challenge 2: Generate something more interesting!
-
-    // See blur() for an example of how to save the image
-}
+// fn crop(img: &DynamicImage, value: i32)  {
+//     // See blur() for an example of how to open an image.
+//
+//     // .crop() takes four arguments: x: u32, y: u32, width: u32, height: u32
+//     // You may hard-code them, if you like.  It returns a new image.
+//
+//     // Challenge: parse the four values from the command-line and pass them
+//     // through to this function.
+//
+//     // See blur() for an example of how to save the image.
+// }
+//
+// fn rotate(infile: String, outfile: String) {
+//     // See blur() for an example of how to open an image.
+//     // There are 3 rotate functions to choose from (all clockwise):
+//     //   .rotate90()
+//     //   .rotate180()
+//     //   .rotate270()
+//     // All three methods return a new image.  Pick one and use it!
+//
+//     // Challenge: parse the rotation amount from the command-line, pass it
+//     // through to this function to select which method to call.
+//
+//     // See blur() for an example of how to save the image.
+// }
+//
+// fn invert(infile: String, outfile: String) {
+//     // See blur() for an example of how to open an image.
+//
+//     // .invert() takes no arguments and converts the image in-place, so you
+//     // will use the same image to save out to a different file.
+//
+//     // See blur() for an example of how to save the image.
+// }
+//
+// fn grayscale(infile: String, outfile: String) {
+//     // See blur() for an example of how to open an image.
+//
+//     // .grayscale() takes no arguments. It returns a new image.
+//
+//     // See blur() for an example of how to save the image.
+// }
+//
+// fn generate(outfile: String) {
+//     // Create an ImageBuffer -- see fractal() for an example
+//
+//     // Iterate over the coordinates and pixels of the image -- see fractal() for an example
+//
+//     // Set the image to some solid color. -- see fractal() for an example
+//
+//     // Challenge: parse some color data from the command-line, pass it through
+//     // to this function to use for the solid color.
+//
+//     // Challenge 2: Generate something more interesting!
+//
+//     // See blur() for an example of how to save the image
+// }
 
 // This code was adapted from https://github.com/PistonDevelopers/image
 fn fractal(outfile: String) {
